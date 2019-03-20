@@ -30,9 +30,9 @@ dependencies {
     // newer Android gradle plugin with an older one, we'll get back the same details.
     implementation("com.android.tools.build:gradle:3.3.2")
 
-    testImplementation("org.junit.jupiter:junit-jupiter-api:5.3.1")
-    testImplementation("org.junit.jupiter:junit-jupiter-engine:5.3.1")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:5.3.1")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.4.1")
+    testImplementation("org.junit.jupiter:junit-jupiter-engine:5.4.1")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.4.1")
     testImplementation("org.mockito:mockito-core:2.23.0")
 }
 
