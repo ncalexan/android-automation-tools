@@ -7,12 +7,36 @@ package org.mozilla.android
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
+import org.gradle.api.logging.Logger
+import org.gradle.api.logging.Logging
 import java.net.URI
+import java.util.*
 
 class MozillaPlugin : Plugin<Project> {
+    lateinit var pluginLogger: Logger
 
     override fun apply(project: Project) {
+        pluginLogger = Logging.getLogger("org.mozilla.android")
+
+        injectLocalPropertiesExtension(project)
         injectAppServicesMavenRepository(project)
+    }
+
+    /**
+     * Read `$rootDir/local.properties` and expose it as a `Properties` instance in `project` extension map.
+     *
+     * If `local.properties` cannot be read, this will be an empty `Properties()` instance.
+     */
+    private fun injectLocalPropertiesExtension(project: Project) {
+        val localProperties: Properties = Properties()
+        val file = project.rootProject.file("local.properties")
+        if (file.canRead()) {
+            localProperties.load(file.inputStream())
+            pluginLogger.lifecycle("Loaded local properties: ${file}", file.absolutePath)
+        } else {
+            pluginLogger.lifecycle("No local properties loaded; did not find: ${file}", file.absolutePath)
+        }
+        project.extensions.extraProperties.set("localProperties", localProperties)
     }
 
     private fun injectAppServicesMavenRepository(project: Project) {
@@ -35,7 +59,7 @@ class MozillaPlugin : Plugin<Project> {
 
             // Otherwise, inject the dependency.
             if (existing == null) {
-                logger.info("Injecting repository for project '${project}': '${customName}' Maven repository with url '${customURI.toASCIIString()}'")
+                pluginLogger.info("Injecting repository for project '${project}': '${customName}' Maven repository with url '${customURI.toASCIIString()}'")
                 val customMavenRepo = project.repositories.maven {
                     it.name = customName
                     it.url = customURI
@@ -44,7 +68,7 @@ class MozillaPlugin : Plugin<Project> {
                 project.repositories.removeAt(project.repositories.size - 1)
                 project.repositories.addFirst(customMavenRepo)
 
-                logger.info("Repository list for ${project} after injection:")
+                pluginLogger.debug("Repository list for ${project} after injection:")
                 project.repositories.toList().forEach {
                     logger.info("- ${it.getName()}")
                 }
