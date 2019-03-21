@@ -14,7 +14,7 @@ buildscript {
     }
   }
   dependencies {
-    classpath "org.mozilla.android:gradle-plugin:0.2"
+    classpath "org.mozilla.android:gradle-plugin:0.2.1"
   }
 }
 ```
@@ -26,6 +26,41 @@ apply plugin: "org.mozilla.android"
 
 Applying the plugin via the modern plugins DSL syntax is currently broken
 ([#37](https://github.com/mozilla-mobile/android-automation-tools/issues/37)).
+
+### Consume a local GeckoView
+
+The plugin helps you use a locally-built GeckoView in a downstream GeckoView-consuming App.  Apply the plugin and, in `local.properties` in the root directory of the consuming App -- e.g., in `/path/to/firefox-tv/local.properties` or `/path/to/fenix/local.properties` -- add a line like:
+
+```
+local-geckoview.topsrcdir=/absolute/path/to/mozilla-central
+```
+
+This will use the local GeckoView produced by the default object directory corresponding to that source directory (i.e., corresponding to your `mozconfig` or `.mozconfig`).  If you have multiple object directories, set both the source directory _and_ the object directory, like:
+
+```
+local-geckoview.topsrcdir=/absolute/path/to/mozilla-central
+local-geckoview.topsrcdir=/absolute/path/to/mozilla-central/objdir
+```
+
+This functionality will remain in place until such time as Gradle composite builds work well with `mozilla-central`.
+
+#### Updating the local GeckoView
+
+The plugin only consumers a locally-built GeckoView: it does not build or in any other way change your object directory.
+
+To update your local GeckoView, do the following.  **If you're doing full builds of Gecko**, invoke (in your source directory):
+
+```shell
+./mach build binaries && ./mach gradle geckoview:publishWithGeckoBinariesDebugPublicationToMavenRepository
+```
+
+**If you're using artifact builds of Gecko**, invoke:
+
+```shell
+./mach gradle geckoview:publishWithGeckoBinariesDebugPublicationToMavenRepository
+```
+
+Then invoke the downstream GeckoView-consuming App's Gradle command, which is often `./gradlew app:assemble...` or `./gradlew app:install...`.  Changes to GeckoView (both to libraries like `libxul.so` and to JS resources in the `omni.ja`) should be incorporated into the downstream App's built artifacts immediately.
 
 ### Tasks
 The following tasks can be imported from `org.mozilla.android.tasks` (click the links for more details):
@@ -51,48 +86,10 @@ repository into Android Studio.
 
 ### Developing the plugin against local repositories
 Like [the android components suggest][components local], it's preferable to avoid depending on apps outside of the repository. Instead:
-- Write unit tests
-- Work against the sample app (TODO: add sample app :)
+- Write unit tests and/or Gradle TestKit tests.
+- Work against the sample app in `samples/app`.  For example, to test consuming a local GeckoView, modify `samples/local.properties` and run `./gradlew -p samples app:assembleDebug`, etc.
 
-If you wish to develop against local repositories anyway, see below.
-
-#### Set a version number
-Append `-SNAPSHOT` to the end of the version number in this project's build.gradle.kts. If you don't, your imports may conflict with those from remote repositories and you can end up polluting your local maven cache.
-
-#### Publish to your local maven repository
-To publish the gradle plugin:
-```sh
-./gradlew gradle-plugin:publishToMavenLocal
-```
-
-#### Import your local plugin changes into the local repository
-In the top level gradle file, you have to add the dependencies (using your own version number):
-```groovy
-buildscript {
-    repositories {
-        mavenLocal()
-    }
-
-    dependencies {
-        classpath "org.mozilla.android:gradle-plugin:0.1-SNAPSHOT"
-    }
-}
-
-apply plugin: org.mozilla.android.MozillaPlugin
-```
-
-And again in `buildSrc/build.gradle`:
-```groovy
-repositories {
-    mavenLocal()
-}
-
-dependencies {
-    implementation("org.mozilla.android:gradle-plugin:0.1-SNAPSHOT")
-}
-```
-
-If your project applies the plugin from a remote maven repository, be sure to remove that application.
+If you wish to develop against other local repositories, it's best to use Gradle composite builds, following the model of the samples.
 
 ### Publishing to plugins.gradle.org
 To publish the plugin to the gradle plugin portal, first [create credentials][]. After making your changes and bumping the version, run the following from the root directory:

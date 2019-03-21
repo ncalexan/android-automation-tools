@@ -4,6 +4,7 @@
 
 package org.mozilla.android.ext
 
+import java.io.File
 import java.lang.IllegalStateException
 
 /**
@@ -12,13 +13,26 @@ import java.lang.IllegalStateException
  *
  * @throws IllegalStateException when the command exits with a non-zero value
  */
-internal fun Runtime.execWaitForStdOut(cmd: String): String {
+internal fun Runtime.execWaitForStdOut(cmd: String, env: Array<String>? = null, dir: File? = null): String {
     fun Process.assertNoError() {
         // We could check standard error too, but this is probably good enough.
         if (exitValue() != 0) throw IllegalStateException("Runtime exited with non-zero value: ${exitValue()}")
     }
 
-    return exec(cmd).let { process ->
+    return exec(cmd, env, dir).let { process ->
+        process.waitFor()
+        process.assertNoError()
+        process.inputStream.bufferedReader().use { it.readText() }
+    }
+}
+
+internal fun Runtime.execWaitForStdOut(cmd: Array<String>, env: Array<String>? = null, dir: File? = null): String {
+    fun Process.assertNoError() {
+        // We could check standard error too, but this is probably good enough.
+        if (exitValue() != 0) throw IllegalStateException("Runtime exited with non-zero value: ${exitValue()}")
+    }
+
+    return exec(cmd, env, dir).let { process ->
         process.waitFor()
         process.assertNoError()
         process.inputStream.bufferedReader().use { it.readText() }
